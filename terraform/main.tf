@@ -1,8 +1,29 @@
 # Main tf file for managing all modules
 # Define provider and call each module with vars
 
+# Data source to fetch secrets
+data "aws_secretsmanager_secret_version" "creds" {
+  depends_on = [module.secrets]
+  secret_id  = module.secrets.secret_arn
+}
+
+locals {
+  secrets = jsondecode(data.aws_secretsmanager_secret_version.creds.secret_string)
+}
+
 provider "aws" {
-  region = var.region
+  region     = var.region
+  access_key = local.secrets.aws_access_key_id
+  secret_key = local.secrets.aws_secret_access_key
+}
+
+# Add secrets module to your existing modules
+module "secrets" {
+  source = "./modules/secrets"
+  
+  aws_access_key_id     = local.secrets.aws_access_key_id
+  aws_secret_access_key = local.secrets.aws_secret_access_key
+  tags                 = var.common_tags
 }
 
 # Create VPC with public and private subnets

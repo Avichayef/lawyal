@@ -1,5 +1,7 @@
+
 provider "aws" {
   region = "us-east-1"
+  # This will use your local AWS credentials from aws configure
 }
 
 # Random suffix for unique bucket name
@@ -42,8 +44,21 @@ resource "aws_dynamodb_table" "terraform_lock" {
     name = "LockID"
     type = "S"
   }
+}
 
-  tags = {
-    Name = "Terraform State Lock Table"
-  }
+# Create initial AWS Secrets Manager secret
+resource "aws_secretsmanager_secret" "project_secrets" {
+  name        = "lawyal-project-secrets"
+  description = "Initial secrets for Lawyal DevOps Project"
+}
+
+# Store the initial secret values
+resource "aws_secretsmanager_secret_version" "project_secrets" {
+  secret_id = aws_secretsmanager_secret.project_secrets.id
+  
+  secret_string = jsonencode({
+    aws_access_key_id     = var.aws_access_key_id
+    aws_secret_access_key = var.aws_secret_access_key
+    api_key              = var.api_key
+  })
 }

@@ -1,7 +1,9 @@
+
 #!/bin/bash
 
 # Get the bucket name from terraform output
 BUCKET_NAME=$(terraform output -raw state_bucket_name)
+SECRET_ARN=$(terraform output -raw secret_arn)
 
 # Update the backend.tf file
 cat > ../backend.tf << EOF
