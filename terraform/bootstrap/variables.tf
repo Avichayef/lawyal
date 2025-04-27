@@ -13,8 +13,3 @@ variable "aws_secret_access_key" {
   type        = string
   description = "AWS secret access key"
 }
-
-variable "api_key" {
-  type        = string
-  description = "API key for external services"
-}

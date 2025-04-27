@@ -54,3 +54,8 @@ output "eks_private_node_group_id" {
   value = module.eks.private_node_group_id
   description = "private node group ID"
 }
+
+output "app_name" {
+  value       = "flask-app"
+  description = "Name of the application"
+}

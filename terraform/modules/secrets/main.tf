@@ -1,8 +1,9 @@
 # Create AWS Secrets Manager secret
 resource "aws_secretsmanager_secret" "project_secrets" {
-  name        = "lawyal-project-secrets"
-  description = "Secrets for Lawyal DevOps Project"
-  tags        = var.tags
+  name                    = "lawyal-secrets"  
+  description            = "Secrets for Lawyal DevOps Project"
+  recovery_window_in_days = 0  # Immediate deletion when destroyed
+  tags                   = var.tags
 }
 
 # Store the secret values

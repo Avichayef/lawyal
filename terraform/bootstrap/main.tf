@@ -8,6 +8,10 @@ provider "aws" {
 resource "random_integer" "suffix" {
   min = 1000
   max = 9999
+  keepers = {
+    # Generate a new integer each time
+    timestamp = timestamp()
+  }
 }
 
 # Create new bucket with random suffix
@@ -46,19 +50,17 @@ resource "aws_dynamodb_table" "terraform_lock" {
   }
 }
 
-# Create initial AWS Secrets Manager secret
-resource "aws_secretsmanager_secret" "project_secrets" {
-  name        = "lawyal-project-secrets"
-  description = "Initial secrets for Lawyal DevOps Project"
-}
+# Comment out for dev env for now
+# resource "aws_secretsmanager_secret" "project_secrets" {
+#   name                    = "lawyal-secrets"  
+#   description            = "Initial secrets for Lawyal DevOps Project"
+#   recovery_window_in_days = 0
+# }
 
-# Store the initial secret values
-resource "aws_secretsmanager_secret_version" "project_secrets" {
-  secret_id = aws_secretsmanager_secret.project_secrets.id
-  
-  secret_string = jsonencode({
-    aws_access_key_id     = var.aws_access_key_id
-    aws_secret_access_key = var.aws_secret_access_key
-    api_key              = var.api_key
-  })
-}
+# resource "aws_secretsmanager_secret_version" "project_secrets" {
+#   secret_id = aws_secretsmanager_secret.project_secrets.id
+#   secret_string = jsonencode({
+#     aws_access_key_id     = var.aws_access_key_id
+#     aws_secret_access_key = var.aws_secret_access_key
+#   })
+# }

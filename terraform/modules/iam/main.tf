@@ -61,3 +61,47 @@ resource "aws_iam_role_policy_attachment" "ecr_read_only" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.eks_node_group_role.name
 }
+
+data "aws_caller_identity" "current" {}
+
+variable "cluster_oidc_issuer_url" {
+  description = "The OIDC issuer URL from the EKS cluster"
+  type        = string
+}
+
+resource "aws_iam_role" "aws_load_balancer_controller" {
+  name = "aws-load-balancer-controller"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Effect = "Allow"
+        Principal = {
+          Federated = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${replace(var.cluster_oidc_issuer_url, "https://", "")}"
+        }
+        Condition = {
+          StringEquals = {
+            "${replace(var.cluster_oidc_issuer_url, "https://", "")}:sub": "system:serviceaccount:kube-system:aws-load-balancer-controller"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "aws_load_balancer_controller" {
+  policy_arn = aws_iam_policy.aws_load_balancer_controller.arn
+  role       = aws_iam_role.aws_load_balancer_controller.name
+}
+
+# Add the required policy for the Load Balancer Controller
+resource "aws_iam_policy" "aws_load_balancer_controller" {
+  name = "AWSLoadBalancerControllerIAMPolicy"
+  policy = file("${path.module}/lb-controller-policy.json")  # You'll need to add this policy file
+}
+
+output "aws_load_balancer_controller_role_arn" {
+  value = aws_iam_role.aws_load_balancer_controller.arn
+}
