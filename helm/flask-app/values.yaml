@@ -1,54 +1,27 @@
-# These will be overridden by deploy.sh using terraform outputs
-clusterName: null
-appName: null
+# Simplified values file
+replicaCount: 1
 
-# Image configuration
 image:
-  repository: null  # Set by deploy.sh from ECR output
+  repository: null  # Will be set by deploy.sh
   tag: latest
-  # Always pull new images
   pullPolicy: Always
 
 service:
-  # Use LoadBalancer to expose service externally
-  type: LoadBalancer
-  # External port
+  type: LoadBalancer 
   port: 80
-  # Container port
   targetPort: 5000
 
-# Pod scheduling
-nodeSelector:
-  subnet-type: private  # Ensures pods run in private subnets
-
-# Ingress configuration for ALB
-ingress:
-  enabled: true
-  className: "alb"
-  annotations:
-    # Expose ALB to internet
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    # Use IP targeting mode
-    alb.ingress.kubernetes.io/target-type: ip
-  hosts:
-    - host: ""
-      paths:
-        - path: /
-          pathType: Prefix
-
-# Resource limits for pods
 resources:
   limits:
     cpu: 500m
     memory: 512Mi
   requests:
-    cpu: 250m
+    cpu: 200m
     memory: 256Mi
 
-# Auto-scaling configuration
+# Simple autoscaling config
 autoscaling:
   enabled: true
-  minReplicas: 2
-  maxReplicas: 4
-  # Scale when CPU hits 80%
+  minReplicas: 1
+  maxReplicas: 3
   targetCPUUtilizationPercentage: 80

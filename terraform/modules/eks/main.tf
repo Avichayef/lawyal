@@ -68,6 +68,10 @@ resource "aws_eks_node_group" "public_node_group" {
 
   capacity_type = "ON_DEMAND"
 
+  labels = {
+    "subnet-type" = "public"
+  }
+
   tags = {
     Name = "eks-public-node-group"
   }
@@ -89,6 +93,10 @@ resource "aws_eks_node_group" "private_node_group" {
   }
 
   capacity_type = "ON_DEMAND"
+
+  labels = {
+    "subnet-type" = "private"
+  }
 
   tags = {
     Name = "eks-private-node-group"

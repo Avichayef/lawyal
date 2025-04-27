@@ -4,6 +4,9 @@ metadata:
   name: {{ .Release.Name }}-flask-app
   labels:
     app: flask-app
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
 spec:
   type: {{ .Values.service.type }}
   ports:

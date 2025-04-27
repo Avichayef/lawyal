@@ -56,6 +56,11 @@ output "eks_private_node_group_id" {
 }
 
 output "app_name" {
-  value       = "flask-app"
-  description = "Name of the application"
+  value       = replace(var.ecr_repository_name, "-repo", "")  # Converts app repo name to app name
+  description = "Application name derived from ECR repository name"
+}
+
+output "aws_load_balancer_controller_role_arn" {
+  value       = module.iam.aws_load_balancer_controller_role_arn
+  description = "ARN of the AWS Load Balancer Controller IAM role"
 }

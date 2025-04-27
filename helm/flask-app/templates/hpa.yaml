@@ -2,12 +2,14 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ .Release.Name }}-flask-app
+  name: {{ .Values.appName | default .Release.Name }}-{{ .Chart.Name }}
+  labels:
+    app: flask-app
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ .Release.Name }}-flask-app
+    name: {{ .Values.appName | default .Release.Name }}-{{ .Chart.Name }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

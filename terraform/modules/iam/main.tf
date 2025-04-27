@@ -105,3 +105,35 @@ resource "aws_iam_policy" "aws_load_balancer_controller" {
 output "aws_load_balancer_controller_role_arn" {
   value = aws_iam_role.aws_load_balancer_controller.arn
 }
+
+# Add EC2 IMDS policy to node group role
+resource "aws_iam_role_policy" "node_group_imds" {
+  name = "eks-node-group-imds"
+  role = aws_iam_role.eks_node_group_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeInstances",
+          "ec2:DescribeTags",
+          "autoscaling:DescribeAutoScalingGroups",
+          "autoscaling:DescribeAutoScalingInstances"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_node_group_lb" {
+  policy_arn = "arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess"
+  role       = aws_iam_role.eks_node_group_role.name
+}
+
+resource "aws_iam_role_policy_attachment" "eks_node_group_ecr" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.eks_node_group_role.name
+}

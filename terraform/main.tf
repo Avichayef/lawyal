@@ -26,7 +26,8 @@ module "eks" {
   subnet_ids = [module.vpc.public_subnet_id, module.vpc.private_subnet_id]
   eks_role_arn = module.iam.eks_cluster_role_arn
   node_group_role_arn = module.iam.eks_node_group_role_arn
-  node_group_name = var.node_group_name  
+  node_group_name = var.node_group_name
+  # Remove the enable_irsa line as it's not needed
 }
 
 # Create ECR repo for Docker images
@@ -43,4 +44,15 @@ module "iam" {
   source = "./modules/iam"
   region = var.region
   cluster_oidc_issuer_url = module.eks.cluster_oidc_issuer_url
+}
+
+# Create the OIDC provider for the cluster
+data "tls_certificate" "eks" {
+  url = module.eks.cluster_oidc_issuer_url
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+  url             = module.eks.cluster_oidc_issuer_url
 }

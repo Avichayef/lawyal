@@ -21,6 +21,7 @@
                 "elasticloadbalancing:DescribeLoadBalancerAttributes",
                 "elasticloadbalancing:DescribeListeners",
                 "elasticloadbalancing:DescribeListenerCertificates",
+                "elasticloadbalancing:DescribeListenerAttributes",
                 "elasticloadbalancing:DescribeSSLPolicies",
                 "elasticloadbalancing:DescribeRules",
                 "elasticloadbalancing:DescribeTargetGroups",
@@ -57,7 +58,10 @@
             "Effect": "Allow",
             "Action": [
                 "ec2:AuthorizeSecurityGroupIngress",
-                "ec2:RevokeSecurityGroupIngress"
+                "ec2:RevokeSecurityGroupIngress",
+                "ec2:CreateSecurityGroup",
+                "ec2:DeleteSecurityGroup",
+                "ec2:CreateTags"
             ],
             "Resource": "*"
         },
@@ -67,7 +71,9 @@
                 "elasticloadbalancing:CreateListener",
                 "elasticloadbalancing:DeleteListener",
                 "elasticloadbalancing:CreateRule",
-                "elasticloadbalancing:DeleteRule"
+                "elasticloadbalancing:DeleteRule",
+                "elasticloadbalancing:CreateTargetGroup",
+                "elasticloadbalancing:CreateLoadBalancer"
             ],
             "Resource": "*"
         },
@@ -77,11 +83,7 @@
                 "elasticloadbalancing:AddTags",
                 "elasticloadbalancing:RemoveTags"
             ],
-            "Resource": [
-                "arn:aws:elasticloadbalancing:*:*:targetgroup/*/*",
-                "arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*",
-                "arn:aws:elasticloadbalancing:*:*:loadbalancer/app/*/*"
-            ]
+            "Resource": "*"
         },
         {
             "Effect": "Allow",
