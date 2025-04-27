@@ -1,0 +1,112 @@
+# Workflow Name
+name: Infrastructure and Application Deploy
+
+# workflow run on:
+on:
+  push:
+    # on pushes to main branch
+    branches: [ main ]
+    # Only trigger when these paths change
+    paths:
+      - 'terraform/**'    # in infrastructure code
+      - 'app/**'          # in app code
+      - 'helm/**'         # in Helm charts
+      - '.github/workflows/**'  # Changes in workflows
+
+# Environment variables
+env:
+  AWS_REGION: us-east-1  # AWS region
+  TF_VAR_environment: dev  # Terraform environment
+
+# permissions for the GitHub Actions runner
+permissions:
+  id-token: write    # AWS OIDC authentication
+  contents: read     # Needed to checkout code
+
+# List of jobs
+jobs:
+  # Deploy infrastructure
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      # Get code from GitHub
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up AWS credentials using OIDC
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  # IAM role to assume
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Install Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      # Terraform init and apply
+      - name: Terraform Init and Apply
+        working-directory: terraform  # working directory to terraform
+        run: |
+          terraform init
+          terraform apply -var-file="secrets.tfvars" -auto-approve
+        env:
+          # Pass AWS credentials as variables
+          TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  # Build and deploy app
+  deploy-app:
+    needs: terraform  # Wait for infrastructure to complete
+    runs-on: ubuntu-latest  
+    steps:
+      # Get code from GitHub
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up AWS credentials using OIDC
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  # IAM role to assume
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Log in to ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # Build and push Docker image
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}  # ECR registry URL
+          ECR_REPOSITORY: ly-flask-app-repo                      # repo name
+          IMAGE_TAG: ${{ github.sha }}                          # Use commit SHA as tag
+        run: |
+          cd app
+          # Build image with commit SHA tag
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          # Push image with commit SHA tag
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          # Also tag as latest
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          # Push latest tag
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      # Deploy to EKS using Helm
+      - name: Deploy to EKS
+        run: |
+          # Update kubeconfig for EKS cluster access
+          aws eks update-kubeconfig --name lawyal-project-eks-cluster --region ${{ env.AWS_REGION }}
+          
+          cd helm
+          # Get ECR repository URL
+          ECR_REPO=$(aws ecr describe-repositories --repository-names ly-flask-app-repo --query 'repositories[0].repositoryUri' --output text)
+          
+          # Deploy/upgrade using Helm
+          helm upgrade --install flask-app ./flask-app \
+            --set image.repository=$ECR_REPO \
+            --set image.tag=${{ github.sha }} \
+            --wait --timeout 5m

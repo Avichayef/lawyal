@@ -1,0 +1,57 @@
+# Prometheus configuration
+prometheus:
+  enabled: true  # Enable Prometheus
+  serverFiles:
+    prometheus.yml:
+      scrape_configs:
+        # Configure how to collect metrics from our Flask app
+        - job_name: 'flask-app'
+          kubernetes_sd_configs:
+            - role: pod  # Discover pods automatically
+          relabel_configs:
+            # Only collect from pods with label app=flask-app
+            - source_labels: [__meta_kubernetes_pod_label_app]
+              regex: flask-app
+              action: keep
+
+# Grafana configuration
+grafana:
+  enabled: true  # Enable Grafana
+  adminPassword: "admin"  # Set admin password
+  
+  # Configure Prometheus as a data source
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://prometheus-server
+          access: proxy
+          isDefault: true
+
+  # Configure dashboard providers
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+
+  # Define dashboards
+  dashboards:
+    default:
+      flask-app-dashboard:
+        # JSON definition of a dashboard that shows:
+        # - Memory usage
+        # - Other metrics can be added here
+        json: |
+          {
+            # ... (dashboard JSON configuration) ...
+          }
