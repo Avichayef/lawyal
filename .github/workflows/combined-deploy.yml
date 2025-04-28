@@ -64,8 +64,10 @@ jobs:
             terraform apply -auto-approve
           fi
           
-          # Get the bucket name from terraform state
-          BUCKET_NAME=$(terraform show -json | jq -r '.values.outputs.state_bucket_name.value')
+          # Get the bucket name and update backend.tf
+          echo "Fetching bucket name..."
+          terraform output
+          BUCKET_NAME=$(terraform output -raw state_bucket_name)
           echo "Using bucket: ${BUCKET_NAME}"
           
           cd ..
