@@ -47,14 +47,29 @@ jobs:
         with:
           terraform_version: 1.5.0
 
-      # First run Bootstrap Terraform backend
-      - name: Bootstrap Terraform Backend
+      # Check and run Bootstrap Terraform backend only if needed
+      - name: Check and Bootstrap Terraform Backend
         working-directory: terraform/bootstrap
         run: |
-          terraform init
-          terraform apply -auto-approve
-          # Get the bucket name and update backend.tf
-          BUCKET_NAME=$(terraform output -raw state_bucket_name)
+          # Check if bootstrap was already run by querying DynamoDB
+          BOOTSTRAP_STATUS=$(aws dynamodb get-item \
+            --table-name terraform-bootstrap-tracker \
+            --key '{"Environment": {"S": "prod"}}' \
+            --attributes-to-get BucketName \
+            2>/dev/null || echo "")
+          
+          if [ ! -z "$BOOTSTRAP_STATUS" ]; then
+            # Extract bucket name from DynamoDB response
+            BUCKET_NAME=$(echo $BOOTSTRAP_STATUS | jq -r '.Item.BucketName.S')
+            echo "Bootstrap already ran. Using existing bucket: $BUCKET_NAME"
+          else
+            echo "Bootstrap never ran. Running bootstrap..."
+            terraform init
+            terraform apply -auto-approve
+            BUCKET_NAME=$(terraform output -raw state_bucket_name)
+          fi
+          
+          # Update backend.tf with the bucket name
           cd ..
           cat > backend.tf << EOF
           terraform {
@@ -67,6 +82,8 @@ jobs:
             }
           }
           EOF
+          
+          echo "Using bucket: ${BUCKET_NAME}"
         env:
           TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
