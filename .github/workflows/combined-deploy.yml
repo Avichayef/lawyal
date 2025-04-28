@@ -51,19 +51,14 @@ jobs:
       - name: Check and Bootstrap Terraform Backend
         working-directory: terraform/bootstrap
         run: |
-          # Check if bootstrap was already run by querying DynamoDB
-          BOOTSTRAP_STATUS=$(aws dynamodb get-item \
-            --table-name terraform-bootstrap-tracker \
-            --key '{"Environment": {"S": "prod"}}' \
-            --attributes-to-get BucketName \
-            2>/dev/null || echo "")
-          
-          if [ ! -z "$BOOTSTRAP_STATUS" ]; then
-            # Extract bucket name from DynamoDB response
-            BUCKET_NAME=$(echo $BOOTSTRAP_STATUS | jq -r '.Item.BucketName.S')
-            echo "Bootstrap already ran. Using existing bucket: $BUCKET_NAME"
+          # Check if terraform-lock table exists (indicates bootstrap was run)
+          if aws dynamodb describe-table --table-name terraform-lock 2>/dev/null; then
+            echo "terraform-lock table exists - bootstrap was already run"
+            # Get the existing bucket name from the backend.tf file
+            BUCKET_NAME=$(grep "bucket.*=" "../backend.tf" | sed 's/.*= *"\(.*\)".*/\1/')
+            echo "Using existing bucket: $BUCKET_NAME"
           else
-            echo "Bootstrap never ran. Running bootstrap..."
+            echo "terraform-lock table doesn't exist. Running bootstrap..."
             terraform init
             terraform apply -auto-approve
             BUCKET_NAME=$(terraform output -raw state_bucket_name)
