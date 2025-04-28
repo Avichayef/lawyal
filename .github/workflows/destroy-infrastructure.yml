@@ -1,4 +1,4 @@
-name: Destroy Infrastructur
+name: Destroy Infrastructure
 
 on:
   workflow_dispatch:
@@ -31,32 +31,37 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-        env:
-          TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.0
 
-      - name: Get Cluster Name
-        id: cluster-name
-        working-directory: terraform
+      # Step 1: Get state bucket name from backend.tf
+      - name: Get State Bucket Name
+        id: get-bucket
         run: |
-          terraform init
-          CLUSTER_NAME=$(terraform output -raw eks_cluster_name || echo "")
-          echo "cluster_name=${CLUSTER_NAME}" >> $GITHUB_OUTPUT
+          BUCKET_NAME=$(grep 'bucket.*=' terraform/backend.tf | sed 's/.*= *"\(.*\)".*/\1/')
+          echo "bucket_name=${BUCKET_NAME}" >> $GITHUB_OUTPUT
 
+      # Step 2: Configure kubectl and get cluster info
       - name: Configure kubectl
-        if: steps.cluster-name.outputs.cluster_name != ''
         run: |
-          aws eks update-kubeconfig --name ${{ steps.cluster-name.outputs.cluster_name }} --region ${{ env.AWS_REGION }}
+          CLUSTER_NAME=$(aws eks list-clusters --query 'clusters[0]' --output text)
+          if [ ! -z "$CLUSTER_NAME" ]; then
+            aws eks update-kubeconfig --name $CLUSTER_NAME --region ${{ env.AWS_REGION }}
+            echo "cluster_name=${CLUSTER_NAME}" >> $GITHUB_OUTPUT
+          fi
 
+      # Step 3: Remove Helm deployments
       - name: Remove Helm Deployments
-        if: steps.cluster-name.outputs.cluster_name != ''
         run: |
-          echo "Removing Helm deployments..."
+          if kubectl get ns monitoring &>/dev/null; then
+            echo "Removing monitoring stack..."
+            helm uninstall monitoring -n monitoring || true
+          fi
+          
+          echo "Removing application..."
           helm uninstall flask-app || true
           helm uninstall monitoring -n monitoring || true
           helm uninstall aws-load-balancer-controller -n kube-system || true
@@ -64,6 +69,7 @@ jobs:
           echo "Waiting for resources to be cleaned up..."
           sleep 30
 
+      # Step 4: Destroy main infrastructure
       - name: Destroy Main Infrastructure
         working-directory: terraform
         run: |
@@ -74,6 +80,7 @@ jobs:
           TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
+      # Step 5: Destroy bootstrap infrastructure
       - name: Destroy Bootstrap Infrastructure
         working-directory: terraform/bootstrap
         run: |
@@ -83,3 +90,35 @@ jobs:
         env:
           TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      # Step 6: Clean up S3 bucket if it still exists
+      - name: Clean up S3 bucket
+        if: steps.get-bucket.outputs.bucket_name != ''
+        run: |
+          echo "Checking if state bucket still exists..."
+          if aws s3api head-bucket --bucket ${{ steps.get-bucket.outputs.bucket_name }} 2>/dev/null; then
+            echo "Forcing deletion of state bucket..."
+            aws s3 rm s3://${{ steps.get-bucket.outputs.bucket_name }} --recursive
+            aws s3api delete-bucket --bucket ${{ steps.get-bucket.outputs.bucket_name }}
+          fi
+
+      # Step 7: Clean up DynamoDB lock table
+      - name: Clean up DynamoDB lock table
+        run: |
+          echo "Checking if lock table exists..."
+          if aws dynamodb describe-table --table-name terraform-lock 2>/dev/null; then
+            echo "Deleting lock table..."
+            aws dynamodb delete-table --table-name terraform-lock
+          fi
+
+      - name: Destruction Complete
+        run: |
+          echo "✅ Infrastructure destruction completed successfully"
+          echo "The following resources have been destroyed:"
+          echo "- Helm deployments (monitoring, flask-app, load balancer controller)"
+          echo "- EKS cluster and associated resources"
+          echo "- VPC and networking components"
+          echo "- IAM roles and policies"
+          echo "- ECR repositories"
+          echo "- S3 state bucket"
+          echo "- DynamoDB lock table"
