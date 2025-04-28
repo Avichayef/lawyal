@@ -21,7 +21,8 @@ env:
 # permissions for the GitHub Actions runner
 permissions:
   id-token: write    # AWS OIDC authentication
-  contents: read     # Needed to checkout code
+  contents: write    # Needed to checkout code
+  pull-requests: write
 
 # List of jobs
 jobs:
@@ -216,12 +217,16 @@ jobs:
           # Update the app_url.txt file
           echo "Application URL: http://$APP_URL" > app_url.txt
           
-          # Commit and push the updated file
-          git config --global user.name "GitHub Actions Bot"
-          git config --global user.email "actions@github.com"
+          # Configure git with token-based authentication
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Use GITHUB_TOKEN for authentication
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+          
           git add app_url.txt
           git commit -m "Update application URL [skip ci]"
-          git push
+          git push origin HEAD:${GITHUB_REF}
 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
