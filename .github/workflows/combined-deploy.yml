@@ -47,9 +47,8 @@ jobs:
         with:
           terraform_version: 1.5.0
 
-      # Check and run Bootstrap Terraform backend only if needed
-      - name: Check and Bootstrap Terraform Backend
-        id: bootstrap
+      # Bootstrap Terraform Backend
+      - name: Bootstrap Terraform Backend
         working-directory: terraform/bootstrap
         env:
           TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -57,22 +56,30 @@ jobs:
         run: |
           # Check if terraform-lock table exists
           if aws dynamodb describe-table --table-name terraform-lock 2>/dev/null; then
-            echo "Bootstrap was already run - getting existing bucket name..."
-            BUCKET_NAME=$(terraform output -raw state_bucket_name)
+            echo "Bootstrap was already run - skipping..."
           else
             echo "Running bootstrap..."
             terraform init
             terraform apply -auto-approve
-            BUCKET_NAME=$(terraform output -raw state_bucket_name)
           fi
           
-          if [ -z "$BUCKET_NAME" ]; then
-            echo "Error: Could not get bucket name from terraform output"
-            exit 1
-          fi
+          # Get the bucket name and update backend.tf
+          BUCKET_NAME=$(terraform output -raw state_bucket_name)
           
-          echo "Using bucket: ${BUCKET_NAME}"
-          echo "bucket_name=$BUCKET_NAME" >> "$GITHUB_OUTPUT"
+          cd ..
+          cat > backend.tf << EOF
+          terraform {
+            backend "s3" {
+              bucket         = "${BUCKET_NAME}"
+              key            = "terraform.tfstate"
+              region         = "us-east-1"
+              encrypt        = true
+              dynamodb_table = "terraform-lock"
+            }
+          }
+          EOF
+          
+          echo "Updated backend.tf with bucket name: ${BUCKET_NAME}"
 
       # Configure and initialize backend for main Terraform
       - name: Configure and Init Terraform Backend
