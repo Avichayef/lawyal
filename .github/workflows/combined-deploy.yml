@@ -49,11 +49,9 @@ jobs:
 
       # Check and run Bootstrap Terraform backend only if needed
       - name: Check and Bootstrap Terraform Backend
+        id: bootstrap
         working-directory: terraform/bootstrap
         run: |
-          echo "=== BEFORE: Content of backend.tf from repo ==="
-          cat ../backend.tf
-          
           # Check if terraform-lock table exists
           if aws dynamodb describe-table --table-name terraform-lock 2>/dev/null; then
             echo "Bootstrap was already run - getting existing bucket name..."
@@ -70,13 +68,17 @@ jobs:
           fi
           
           echo "Using bucket: ${BUCKET_NAME}"
-          
-          # Update backend.tf with new configuration
-          cd ..
+          # Set output for other steps
+          echo "bucket_name=${BUCKET_NAME}" >> $GITHUB_OUTPUT
+
+      # Configure backend for main Terraform
+      - name: Configure Terraform Backend
+        working-directory: terraform
+        run: |
           cat > backend.tf << EOF
           terraform {
             backend "s3" {
-              bucket         = "${BUCKET_NAME}"
+              bucket         = "${{ steps.bootstrap.outputs.bucket_name }}"
               key            = "terraform.tfstate"
               region         = "us-east-1"
               encrypt        = true
@@ -85,21 +87,7 @@ jobs:
           }
           EOF
           
-          echo "=== AFTER: Updated backend.tf in runner ==="
-          cat backend.tf
-          
-          # Commit and push the updated backend.tf
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git add backend.tf
-          git commit -m "Update backend.tf with correct bucket name [skip ci]"
-          git push
-          
-          # Force terraform to recognize the new backend
-          terraform init -reconfigure
-        env:
-          TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          echo "Configured backend with bucket: ${{ steps.bootstrap.outputs.bucket_name }}"
 
       # Verify backend configuration
       - name: Verify Backend Configuration
@@ -110,7 +98,7 @@ jobs:
           echo "=== Terraform State List (to verify backend access) ==="
           terraform state list || echo "No state exists yet"
 
-      # Terraform init with updated backend
+      # Terraform init with configured backend
       - name: Init main Terraform
         working-directory: terraform
         run: terraform init -reconfigure
