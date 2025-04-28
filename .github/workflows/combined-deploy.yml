@@ -67,18 +67,25 @@ jobs:
             echo "Running bootstrap..."
             terraform init
             terraform apply -auto-approve
-            # Fix the output parsing
-            BUCKET_NAME=$(terraform output -raw state_bucket_name | tr -d '\n')
+            BUCKET_NAME=$(terraform output -raw state_bucket_name)
           fi
           
+          # Clean any newlines or extra spaces from bucket name
+          BUCKET_NAME=$(echo "$BUCKET_NAME" | tr -d '\n' | tr -d ' ')
           echo "Using bucket: ${BUCKET_NAME}"
           # Set output for other steps
           echo "bucket_name=${BUCKET_NAME}" >> "$GITHUB_OUTPUT"
 
-      # Configure and initialize backend for main Terraform1
+      # Configure and initialize backend for main Terraform
       - name: Configure and Init Terraform Backend
         working-directory: terraform
         run: |
+          # First verify we have a valid bucket name
+          if [ -z "${{ steps.bootstrap.outputs.bucket_name }}" ]; then
+            echo "Error: No bucket name provided from bootstrap step"
+            exit 1
+          fi
+          
           echo "=== Creating backend.tf ==="
           cat > backend.tf << EOF
           terraform {
