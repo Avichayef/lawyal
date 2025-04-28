@@ -10,6 +10,8 @@ resource "aws_eks_cluster" "ly_cluster" {
   name     = "lawyal-project-eks-cluster"  
   role_arn = var.eks_role_arn              # IAM role that allow EKS to manage AWS resources
 
+
+
   # VPC configuration for the EKS cluster
   vpc_config {
     subnet_ids              = var.subnet_ids              # Subnets for instances to be run
@@ -18,7 +20,15 @@ resource "aws_eks_cluster" "ly_cluster" {
     security_group_ids      = [aws_security_group.eks_cluster_sg.id]  # Security group for cluster communication
   }
 
- 
+  # Enable control plane logging
+  enabled_cluster_log_types = [
+    "api",
+    "audit",
+    "authenticator",
+    "controllerManager",
+    "scheduler"
+  ]
+
   depends_on = [
     aws_security_group.eks_cluster_sg
   ]

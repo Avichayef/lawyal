@@ -146,10 +146,15 @@ resource "aws_iam_role" "cloudwatch_agent" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action = "sts:AssumeRole"
+        Action = "sts:AssumeRoleWithWebIdentity"
         Effect = "Allow"
         Principal = {
-          Service = ["ec2.amazonaws.com", "eks.amazonaws.com"]
+          Federated = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${replace(var.cluster_oidc_issuer_url, "https://", "")}"
+        }
+        Condition = {
+          StringEquals = {
+            "${replace(var.cluster_oidc_issuer_url, "https://", "")}:sub": "system:serviceaccount:amazon-cloudwatch:cloudwatch-agent"
+          }
         }
       }
     ]
@@ -162,10 +167,11 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_agent_policy" {
   role       = aws_iam_role.cloudwatch_agent.name
 }
 
-resource "aws_iam_role_policy_attachment" "cloudwatch_container_insights" {
-  policy_arn = "arn:aws:iam::aws:policy/AWSCloudWatchAgentServerPolicy"
-  role       = aws_iam_role.cloudwatch_agent.name
-}
+# Remove this incorrect policy attachment
+# resource "aws_iam_role_policy_attachment" "cloudwatch_container_insights" {
+#   policy_arn = "arn:aws:iam::aws:policy/AWSCloudWatchAgentServerPolicy"
+#   role       = aws_iam_role.cloudwatch_agent.name
+# } 
 
 # Add output for the CloudWatch agent role ARN
 output "cloudwatch_agent_role_arn" {

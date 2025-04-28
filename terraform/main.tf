@@ -8,6 +8,17 @@ provider "aws" {
   secret_key = var.aws_secret_access_key
 }
 
+# Add this after your first AWS provider block
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
+  token                  = data.aws_eks_cluster_auth.cluster.token
+}
+
+data "aws_eks_cluster_auth" "cluster" {
+  name = module.eks.cluster_name
+}
+
 # Create VPC with public and private subnets
 module "vpc" {
   source = "./modules/vpc"
@@ -62,5 +73,6 @@ module "monitoring" {
   
   region = var.region
   cloudwatch_agent_role_arn = module.iam.cloudwatch_agent_role_arn
-  depends_on = [module.eks]
+  cluster_name = module.eks.cluster_name
+  # Remove the depends_on
 }

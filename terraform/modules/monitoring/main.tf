@@ -5,16 +5,8 @@ resource "aws_cloudwatch_log_group" "eks_logs" {
 }
 
 # Enable EKS Control Plane Logging
-resource "aws_eks_cluster_logging" "eks_control_plane" {
-  cluster_name = "lawyal-project-eks-cluster"
-  enabled_types = [
-    "api",
-    "audit",
-    "authenticator",
-    "controllerManager",
-    "scheduler"
-  ]
-}
+# Note: This should be part of the EKS cluster resource configuration instead
+# Moving this configuration to the EKS module
 
 # CloudWatch Dashboard for EKS monitoring
 resource "aws_cloudwatch_dashboard" "eks_dashboard" {
@@ -112,6 +104,15 @@ resource "aws_cloudwatch_metric_alarm" "pod_memory_high" {
   }
 }
 
+# Keep the data sources and resources
+data "aws_eks_cluster" "cluster" {
+  name = var.cluster_name
+}
+
+data "aws_eks_cluster_auth" "cluster" {
+  name = var.cluster_name
+}
+
 # Create Kubernetes namespace for CloudWatch agent
 resource "kubernetes_namespace" "amazon_cloudwatch" {
   metadata {
@@ -119,8 +120,8 @@ resource "kubernetes_namespace" "amazon_cloudwatch" {
   }
 }
 
-# Deploy CloudWatch agent as DaemonSet
-resource "kubernetes_daemon_set" "cloudwatch_agent" {
+# Deploy CloudWatch agent as DaemonSet (fixed resource name)
+resource "kubernetes_daemonset" "cloudwatch_agent" {
   metadata {
     name      = "cloudwatch-agent"
     namespace = kubernetes_namespace.amazon_cloudwatch.metadata[0].name
