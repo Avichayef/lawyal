@@ -1,0 +1,85 @@
+name: Destroy Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_destroy:
+        description: 'Type "DESTROY" to confirm infrastructure destruction'
+        required: true
+        type: string
+
+env:
+  AWS_REGION: us-east-1
+  TF_VAR_environment: dev
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm_destroy == 'DESTROY'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+        env:
+          TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Get Cluster Name
+        id: cluster-name
+        working-directory: terraform
+        run: |
+          terraform init
+          CLUSTER_NAME=$(terraform output -raw eks_cluster_name || echo "")
+          echo "cluster_name=${CLUSTER_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Configure kubectl
+        if: steps.cluster-name.outputs.cluster_name != ''
+        run: |
+          aws eks update-kubeconfig --name ${{ steps.cluster-name.outputs.cluster_name }} --region ${{ env.AWS_REGION }}
+
+      - name: Remove Helm Deployments
+        if: steps.cluster-name.outputs.cluster_name != ''
+        run: |
+          echo "Removing Helm deployments..."
+          helm uninstall flask-app || true
+          helm uninstall monitoring -n monitoring || true
+          helm uninstall aws-load-balancer-controller -n kube-system || true
+          
+          echo "Waiting for resources to be cleaned up..."
+          sleep 30
+
+      - name: Destroy Main Infrastructure
+        working-directory: terraform
+        run: |
+          echo "Destroying main infrastructure..."
+          terraform init
+          terraform destroy -auto-approve
+        env:
+          TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Destroy Bootstrap Infrastructure
+        working-directory: terraform/bootstrap
+        run: |
+          echo "Destroying bootstrap infrastructure..."
+          terraform init
+          terraform destroy -auto-approve -var-file="../secrets.tfvars"
+        env:
+          TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
