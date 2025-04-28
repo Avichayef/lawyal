@@ -74,5 +74,6 @@ module "monitoring" {
   region = var.region
   cloudwatch_agent_role_arn = module.iam.cloudwatch_agent_role_arn
   cluster_name = module.eks.cluster_name
-  # Remove the depends_on
+  # Add depends_on to ensure EKS cluster exists before monitoring tries to read it
+  depends_on = [module.eks]
 }
