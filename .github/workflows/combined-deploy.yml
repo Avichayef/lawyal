@@ -57,6 +57,7 @@ jobs:
           # Check if terraform-lock table exists
           if aws dynamodb describe-table --table-name terraform-lock 2>/dev/null; then
             echo "Bootstrap was already run - skipping..."
+            terraform init
           else
             echo "Running bootstrap..."
             terraform init
