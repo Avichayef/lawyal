@@ -173,81 +173,33 @@ jobs:
             --set image.tag=${{ github.sha }} \
             --wait --timeout 5m
 
-      # Deploy monitoring stack
-      - name: Deploy Monitoring Stack
+      # Create summary with access information
+      - name: Create Deployment Summary
         run: |
-          cd helm
-          ./deploy-monitoring.sh
-
-      # Get and display all relevant URLs and information
-      - name: Display Access Information
-        run: |
-          echo "=== Application Access Information ==="
-          echo "Waiting for Load Balancer URLs (this may take a few minutes)..."
+          APP_URL=$(kubectl get svc flask-app-flask-app -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
           
-          # Get Application Load Balancer URL
-          APP_URL=""
-          ATTEMPTS=0
-          while [ -z "$APP_URL" ] && [ $ATTEMPTS -lt 30 ]; do
-            APP_URL=$(kubectl get svc flask-app-flask-app -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
-            if [ -z "$APP_URL" ]; then
-              ATTEMPTS=$((ATTEMPTS+1))
-              echo "Waiting for Application LB URL... (Attempt $ATTEMPTS/30)"
-              sleep 10
-            fi
-          done
-          
-          # Get Grafana Load Balancer URL
-          GRAFANA_URL=""
-          ATTEMPTS=0
-          while [ -z "$GRAFANA_URL" ] && [ $ATTEMPTS -lt 30 ]; do
-            GRAFANA_URL=$(kubectl get svc -n monitoring monitoring-grafana -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
-            if [ -z "$GRAFANA_URL" ]; then
-              ATTEMPTS=$((ATTEMPTS+1))
-              echo "Waiting for Grafana LB URL... (Attempt $ATTEMPTS/30)"
-              sleep 10
-            fi
-          done
-
-          # Create a summary with all access information
           echo ""
           echo "=== 🚀 Deployment Complete! ==="
           echo ""
           echo "📱 Application URL: http://$APP_URL"
           echo ""
           echo "📊 Monitoring Information:"
-          echo "- Grafana URL: http://$GRAFANA_URL"
-          echo "- Grafana Login:"
-          echo "  • Username: admin"
-          echo "  • Password: admin"
+          echo "- CloudWatch Dashboard: https://${AWS_REGION}.console.aws.amazon.com/cloudwatch/home?region=${AWS_REGION}#dashboards:name=EKS-Monitoring-Dashboard"
           echo ""
           echo "🔍 Useful Commands:"
           echo "- Check application pods: kubectl get pods"
-          echo "- Check monitoring pods: kubectl get pods -n monitoring"
           echo "- View app logs: kubectl logs -l app=flask-app"
           echo ""
-          echo "📈 Monitoring Dashboard:"
-          echo "1. Open Grafana URL: http://$GRAFANA_URL"
-          echo "2. Login with credentials above"
-          echo "3. Go to Dashboards -> Browse -> Flask App Dashboard"
-          echo ""
-          echo "⚠️ Note: Please change the Grafana admin password on first login"
-          
-          # Save URLs as GitHub output variables
-          echo "app_url=http://$APP_URL" >> $GITHUB_OUTPUT
-          echo "grafana_url=http://$GRAFANA_URL" >> $GITHUB_OUTPUT
 
-      # Optional: Add a step to verify the endpoints are responding
+      # Verify endpoints
       - name: Verify Endpoints
         run: |
           echo "Verifying endpoints are responding..."
           
           APP_URL=$(kubectl get svc flask-app-flask-app -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
-          GRAFANA_URL=$(kubectl get svc -n monitoring monitoring-grafana -o jsonpath="{.status.loadBalancer.ingress[0].hostname}")
           
           # Wait for DNS propagation and services to be ready
           sleep 30
           
-          # Check if endpoints are responding
+          # Check if endpoint is responding
           curl -f -s -o /dev/null "http://$APP_URL" || echo "⚠️ Warning: Application endpoint not responding yet"
-          curl -f -s -o /dev/null "http://$GRAFANA_URL" || echo "⚠️ Warning: Grafana endpoint not responding yet"

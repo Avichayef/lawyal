@@ -56,3 +56,11 @@ resource "aws_iam_openid_connect_provider" "eks" {
   thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
   url             = module.eks.cluster_oidc_issuer_url
 }
+
+module "monitoring" {
+  source = "./modules/monitoring"
+  
+  region = var.region
+  cloudwatch_agent_role_arn = module.iam.cloudwatch_agent_role_arn
+  depends_on = [module.eks]
+}

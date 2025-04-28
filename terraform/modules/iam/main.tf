@@ -137,3 +137,38 @@ resource "aws_iam_role_policy_attachment" "eks_node_group_ecr" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.eks_node_group_role.name
 }
+
+# IAM role for CloudWatch Container Insights
+resource "aws_iam_role" "cloudwatch_agent" {
+  name = "eks-cloudwatch-agent-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = ["ec2.amazonaws.com", "eks.amazonaws.com"]
+        }
+      }
+    ]
+  })
+}
+
+# Attach required policies for CloudWatch agent
+resource "aws_iam_role_policy_attachment" "cloudwatch_agent_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  role       = aws_iam_role.cloudwatch_agent.name
+}
+
+resource "aws_iam_role_policy_attachment" "cloudwatch_container_insights" {
+  policy_arn = "arn:aws:iam::aws:policy/AWSCloudWatchAgentServerPolicy"
+  role       = aws_iam_role.cloudwatch_agent.name
+}
+
+# Add output for the CloudWatch agent role ARN
+output "cloudwatch_agent_role_arn" {
+  value = aws_iam_role.cloudwatch_agent.arn
+  description = "ARN of the CloudWatch agent IAM role"
+}
