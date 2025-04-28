@@ -67,6 +67,8 @@ jobs:
           # Get the bucket name - since we only have one bucket!
           BUCKET_NAME=$(aws s3api list-buckets --output text --query "Buckets[].Name")
           echo "Using bucket: ${BUCKET_NAME}"
+          # Set environment variable for next steps
+          echo "BUCKET_NAME=${BUCKET_NAME}" >> $GITHUB_ENV
           
           cd ..
           cat > backend.tf << EOF
@@ -87,17 +89,12 @@ jobs:
       - name: Configure and Init Terraform Backend
         working-directory: terraform
         run: |
-          # First verify we have a valid bucket name
-          if [ -z "$BUCKET_NAME" ]; then
-            echo "Error: No bucket name provided from bootstrap step"
-            exit 1
-          fi
-          
+          # Now we can use the environment variable
           echo "=== Creating backend.tf ==="
           cat > backend.tf << EOF
           terraform {
             backend "s3" {
-              bucket         = "$BUCKET_NAME"
+              bucket         = "${{ env.BUCKET_NAME }}"
               key            = "terraform.tfstate"
               region         = "us-east-1"
               encrypt        = true
