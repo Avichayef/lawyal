@@ -59,7 +59,7 @@ jobs:
             echo "Bootstrap was already run - skipping..."
             terraform init
           else
-            echo "Running bootstrap..."
+            echo "Running bootstraap..."
             terraform init
             terraform apply -auto-approve
           fi
