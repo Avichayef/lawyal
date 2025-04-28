@@ -214,12 +214,12 @@ jobs:
           APP_URL=$(kubectl get service flask-app-flask-app -o jsonpath="{.status.loadBalancer.ingress[0].hostname}" 2>/dev/null)
           
           # Update the app_url.txt file
-          echo "Application URL: http://$APP_URL" > DevopsProject/app_url.txt
+          echo "Application URL: http://$APP_URL" > app_url.txt
           
           # Commit and push the updated file
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
-          git add DevopsProject/app_url.txt
+          git add app_url.txt
           git commit -m "Update application URL [skip ci]"
           git push
 
