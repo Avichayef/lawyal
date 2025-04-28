@@ -54,9 +54,13 @@ jobs:
           # Check if terraform-lock table exists (indicates bootstrap was run)
           if aws dynamodb describe-table --table-name terraform-lock 2>/dev/null; then
             echo "Bootstrap was already run - skipping"
-            # Get existing bucket name from backend.tf
-            BUCKET_NAME=$(grep "bucket.*=" "../backend.tf" | sed 's/.*= *"\(.*\)".*/\1/')
-            echo "Using existing bucket: $BUCKET_NAME"
+            # Get bucket name directly from AWS
+            BUCKET_NAME=$(aws s3 ls | grep lawyal-terraform-state | awk '{print $3}')
+            if [ -z "$BUCKET_NAME" ]; then
+              echo "Error: Could not find terraform state bucket"
+              exit 1
+            fi
+            echo "Found existing bucket: $BUCKET_NAME"
           else
             echo "Running bootstrap..."
             terraform init
@@ -66,7 +70,7 @@ jobs:
           
           echo "Using bucket: ${BUCKET_NAME}"
           
-          # Update backend.tf
+          # Update backend.tf and verify
           cd ..
           cat > backend.tf << EOF
           terraform {
@@ -80,7 +84,9 @@ jobs:
           }
           EOF
           
-          echo "Using bucket: ${BUCKET_NAME}"
+          # Verify backend.tf was updated
+          echo "Content of backend.tf:"
+          cat backend.tf
         env:
           TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
