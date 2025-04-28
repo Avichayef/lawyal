@@ -58,11 +58,7 @@ jobs:
           # Check if terraform-lock table exists
           if aws dynamodb describe-table --table-name terraform-lock 2>/dev/null; then
             echo "Bootstrap was already run - getting existing bucket name..."
-            BUCKET_NAME=$(aws s3 ls | grep lawyal-terraform-state | awk '{print $3}')
-            if [ -z "$BUCKET_NAME" ]; then
-              echo "Error: Could not find terraform state bucket"
-              exit 1
-            fi
+            BUCKET_NAME=$(terraform output -raw state_bucket_name)
           else
             echo "Running bootstrap..."
             terraform init
@@ -70,18 +66,20 @@ jobs:
             BUCKET_NAME=$(terraform output -raw state_bucket_name)
           fi
           
-          # Clean any newlines or extra spaces from bucket name
-          BUCKET_NAME=$(echo "$BUCKET_NAME" | tr -d '\n' | tr -d ' ')
+          if [ -z "$BUCKET_NAME" ]; then
+            echo "Error: Could not get bucket name from terraform output"
+            exit 1
+          fi
+          
           echo "Using bucket: ${BUCKET_NAME}"
-          # Set output for other steps
-          echo "bucket_name=${BUCKET_NAME}" >> "$GITHUB_OUTPUT"
+          echo "bucket_name=$BUCKET_NAME" >> "$GITHUB_OUTPUT"
 
       # Configure and initialize backend for main Terraform
       - name: Configure and Init Terraform Backend
         working-directory: terraform
         run: |
           # First verify we have a valid bucket name
-          if [ -z "${{ steps.bootstrap.outputs.bucket_name }}" ]; then
+          if [ -z "$BUCKET_NAME" ]; then
             echo "Error: No bucket name provided from bootstrap step"
             exit 1
           fi
@@ -90,7 +88,7 @@ jobs:
           cat > backend.tf << EOF
           terraform {
             backend "s3" {
-              bucket         = "${{ steps.bootstrap.outputs.bucket_name }}"
+              bucket         = "$BUCKET_NAME"
               key            = "terraform.tfstate"
               region         = "us-east-1"
               encrypt        = true
@@ -113,7 +111,7 @@ jobs:
           terraform state list || echo "No state exists yet (this is expected for first run)"
           
           echo "=== Verifying S3 bucket access ==="
-          aws s3 ls "s3://${{ steps.bootstrap.outputs.bucket_name }}/" || echo "Bucket is empty (this is expected for first run)"
+          aws s3 ls "s3://$BUCKET_NAME/" || echo "Bucket is empty (this is expected for first run)"
 
       # Terraform apply main infrastructure
       - name: Apply main Infrastructure
