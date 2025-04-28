@@ -59,16 +59,13 @@ jobs:
             echo "Bootstrap was already run - skipping..."
             terraform init
           else
-            echo "Running bootstraap..."
+            echo "Running bootstrap..."
             terraform init
             terraform apply -auto-approve
           fi
           
-          # Get the bucket name and update backend.tf
-          echo "Fetching bucket name..."
-          terraform refresh
-          terraform output
-          BUCKET_NAME=$(terraform output -raw state_bucket_name)
+          # Get the bucket name - since we only have one bucket!
+          BUCKET_NAME=$(aws s3api list-buckets --output text --query "Buckets[].Name")
           echo "Using bucket: ${BUCKET_NAME}"
           
           cd ..
