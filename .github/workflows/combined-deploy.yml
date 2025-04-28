@@ -67,12 +67,13 @@ jobs:
             echo "Running bootstrap..."
             terraform init
             terraform apply -auto-approve
-            BUCKET_NAME=$(terraform output -raw state_bucket_name)
+            # Fix the output parsing
+            BUCKET_NAME=$(terraform output -raw state_bucket_name | tr -d '\n')
           fi
           
           echo "Using bucket: ${BUCKET_NAME}"
           # Set output for other steps
-          echo "bucket_name=${BUCKET_NAME}" >> $GITHUB_OUTPUT
+          echo "bucket_name=${BUCKET_NAME}" >> "$GITHUB_OUTPUT"
 
       # Configure and initialize backend for main Terraform
       - name: Configure and Init Terraform Backend
