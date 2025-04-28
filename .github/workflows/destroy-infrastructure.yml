@@ -1,4 +1,4 @@
-name: Destroy Infrastructure
+name: Destroy Infrastructur
 
 on:
   workflow_dispatch:
