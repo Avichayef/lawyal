@@ -11,7 +11,7 @@ on:
       - 'terraform/**'    # in infrastructure code
       - 'app/**'          # in app code
       - 'helm/**'         # in Helm charts
-      - '.github/workflows/**'  # Changes in workflows
+      - '.github/workflows/combined-deploy.yml'  # Changes in workflows
 
 # Environment variables
 env:

@@ -37,12 +37,29 @@ jobs:
         with:
           terraform_version: 1.5.0
 
-      # Step 1: Get state bucket name from backend.tf
-      - name: Get State Bucket Name
-        id: get-bucket
+      # Step 1: Find existing state bucket
+      - name: Find State Bucket
+        id: find-bucket
         run: |
-          BUCKET_NAME=$(grep 'bucket.*=' terraform/backend.tf | sed 's/.*= *"\(.*\)".*/\1/')
+          BUCKET_NAME=$(aws s3 ls | grep lawyal-terraform-state | awk '{print $3}')
+          if [ -z "$BUCKET_NAME" ]; then
+            echo "Error: Could not find terraform state bucket"
+            exit 1
+          fi
           echo "bucket_name=${BUCKET_NAME}" >> $GITHUB_OUTPUT
+          
+          # Update backend.tf with correct bucket name
+          cat > terraform/backend.tf << EOF
+          terraform {
+            backend "s3" {
+              bucket         = "${BUCKET_NAME}"
+              key            = "terraform.tfstate"
+              region         = "us-east-1"
+              encrypt        = true
+              dynamodb_table = "terraform-lock"
+            }
+          }
+          EOF
 
       # Step 2: Configure kubectl and get cluster info
       - name: Configure kubectl
@@ -91,15 +108,15 @@ jobs:
           TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      # Step 6: Clean up S3 bucket if it still exists
+      # Step 6: Clean up S3 bucket
       - name: Clean up S3 bucket
-        if: steps.get-bucket.outputs.bucket_name != ''
+        if: steps.find-bucket.outputs.bucket_name != ''
         run: |
           echo "Checking if state bucket still exists..."
-          if aws s3api head-bucket --bucket ${{ steps.get-bucket.outputs.bucket_name }} 2>/dev/null; then
+          if aws s3api head-bucket --bucket ${{ steps.find-bucket.outputs.bucket_name }} 2>/dev/null; then
             echo "Forcing deletion of state bucket..."
-            aws s3 rm s3://${{ steps.get-bucket.outputs.bucket_name }} --recursive
-            aws s3api delete-bucket --bucket ${{ steps.get-bucket.outputs.bucket_name }}
+            aws s3 rm s3://${{ steps.find-bucket.outputs.bucket_name }} --recursive
+            aws s3api delete-bucket --bucket ${{ steps.find-bucket.outputs.bucket_name }}
           fi
 
       # Step 7: Clean up DynamoDB lock table
@@ -120,5 +137,5 @@ jobs:
           echo "- VPC and networking components"
           echo "- IAM roles and policies"
           echo "- ECR repositories"
-          echo "- S3 state bucket"
+          echo "- S3 state bucket: ${{ steps.find-bucket.outputs.bucket_name }}"
           echo "- DynamoDB lock table"
