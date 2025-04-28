@@ -53,18 +53,20 @@ jobs:
         run: |
           # Check if terraform-lock table exists (indicates bootstrap was run)
           if aws dynamodb describe-table --table-name terraform-lock 2>/dev/null; then
-            echo "terraform-lock table exists - bootstrap was already run"
-            # Get the existing bucket name from the backend.tf file
+            echo "Bootstrap was already run - skipping"
+            # Get existing bucket name from backend.tf
             BUCKET_NAME=$(grep "bucket.*=" "../backend.tf" | sed 's/.*= *"\(.*\)".*/\1/')
             echo "Using existing bucket: $BUCKET_NAME"
           else
-            echo "terraform-lock table doesn't exist. Running bootstrap..."
+            echo "Running bootstrap..."
             terraform init
             terraform apply -auto-approve
             BUCKET_NAME=$(terraform output -raw state_bucket_name)
           fi
           
-          # Update backend.tf with the bucket name
+          echo "Using bucket: ${BUCKET_NAME}"
+          
+          # Update backend.tf
           cd ..
           cat > backend.tf << EOF
           terraform {
