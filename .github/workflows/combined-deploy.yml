@@ -75,7 +75,7 @@ jobs:
           # Set output for other steps
           echo "bucket_name=${BUCKET_NAME}" >> "$GITHUB_OUTPUT"
 
-      # Configure and initialize backend for main Terraform
+      # Configure and initialize backend for main Terraform1
       - name: Configure and Init Terraform Backend
         working-directory: terraform
         run: |
