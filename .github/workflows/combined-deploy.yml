@@ -71,10 +71,11 @@ jobs:
           # Set output for other steps
           echo "bucket_name=${BUCKET_NAME}" >> $GITHUB_OUTPUT
 
-      # Configure backend for main Terraform
-      - name: Configure Terraform Backend
+      # Configure and initialize backend for main Terraform
+      - name: Configure and Init Terraform Backend
         working-directory: terraform
         run: |
+          echo "=== Creating backend.tf ==="
           cat > backend.tf << EOF
           terraform {
             backend "s3" {
@@ -87,21 +88,21 @@ jobs:
           }
           EOF
           
-          echo "Configured backend with bucket: ${{ steps.bootstrap.outputs.bucket_name }}"
+          echo "=== Current backend.tf content ==="
+          cat backend.tf
+          
+          echo "=== Initializing Terraform with new backend ==="
+          terraform init -reconfigure
 
-      # Verify backend configuration
+      # Now verify the backend configuration
       - name: Verify Backend Configuration
         working-directory: terraform
         run: |
-          echo "=== VERIFICATION: Current backend.tf content ==="
-          cat backend.tf
-          echo "=== Terraform State List (to verify backend access) ==="
-          terraform state list || echo "No state exists yet"
-
-      # Terraform init with configured backend
-      - name: Init main Terraform
-        working-directory: terraform
-        run: terraform init -reconfigure
+          echo "=== Verifying backend access ==="
+          terraform state list || echo "No state exists yet (this is expected for first run)"
+          
+          echo "=== Verifying S3 bucket access ==="
+          aws s3 ls "s3://${{ steps.bootstrap.outputs.bucket_name }}/" || echo "Bucket is empty (this is expected for first run)"
 
       # Terraform apply main infrastructure
       - name: Apply main Infrastructure
