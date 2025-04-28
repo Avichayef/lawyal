@@ -1,37 +1,43 @@
 # Best Practices
 
 ## Security
-- ✅ Use AWS IAM roles with least privilege
-- ✅ Enable ECR image scanning
-- ✅ Encrypt data at rest and in transit
-- ✅ Use private subnets for EKS nodes
-- ✅ Regularly rotate credentials
-- ✅ Enable AWS CloudTrail logging
+- ✅ AWS IAM roles with least privilege
+- ✅ ECR image scanning enabled
+- ✅ Data encryption (S3, ECR)
+- ✅ Private subnets for EKS
+- ❌ Automated credential rotation
+- ✅ CloudTrail logging
 
 ## Cost Optimization
-- ✅ Use spot instances for non-critical workloads
-- ✅ Enable auto-scaling based on demand
-- ✅ Clean up unused resources (volumes, load balancers)
-- ✅ Set up AWS Cost Explorer alerts
-- ✅ Use proper instance sizes
+- ❌ Spot instances
+- ✅ Auto-scaling
+- ✅ Resource cleanup
+- ❌ Cost alerts
+- ✅ Right-sized instances
 
 ## Performance
-- ✅ Enable cluster autoscaling
-- ✅ Use container resource limits
-- ✅ Enable metrics collection
-- ✅ Configure horizontal pod autoscaling
-- ✅ Use AWS CloudFront for static content
+- ✅ Cluster autoscaling
+- ✅ Container resource limits
+- ✅ Metrics server
+- ✅ Horizontal pod autoscaling
+- ❌ CloudFront CDN
 
-## DevOps Best Practices
-- ✅ Use Infrastructure as Code (Terraform)
-- ✅ Implement CI/CD pipelines
-- ✅ Version control all configurations
-- ✅ Use environment-specific variables
-- ✅ Regular backup and disaster recovery testing
+## DevOps
+- ✅ Infrastructure as Code (Terraform)
+- ✅ CI/CD (GitHub Actions)
+- ✅ Version control
+- ✅ Environment variables
+- ✅ S3 state backup
 
 ## Monitoring
-- ✅ Set up CloudWatch alerts
-- ✅ Monitor cluster metrics
-- ✅ Enable application logging
-- ✅ Set up error tracking
-- ✅ Regular security audits
+- ✅ CloudWatch alerts
+- ✅ Cluster metrics
+- ✅ Container logs
+- ❌ Error tracking
+- ❌ Security scanning
+
+## Priority TODOs
+1. Implement credential rotation
+2. Add cost monitoring
+3. Configure error tracking
+4. Enable security scanning
