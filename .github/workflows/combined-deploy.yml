@@ -66,6 +66,7 @@ jobs:
           
           # Get the bucket name and update backend.tf
           BUCKET_NAME=$(terraform output -raw state_bucket_name)
+          echo "Using bucket: ${BUCKET_NAME}"
           
           cd ..
           cat > backend.tf << EOF
