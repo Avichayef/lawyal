@@ -96,12 +96,7 @@ jobs:
         working-directory: terraform/bootstrap
         run: |
           echo "Destroying bootstrap infrastructure..."
-          # Create provider configuration for bootstrap
-          cat > provider.tf << EOF
-          provider "aws" {
-            region = "us-east-1"
-          }
-          EOF
+          # Don't create provider.tf since it already exists in main.tf
           
           terraform init
           terraform destroy -auto-approve \

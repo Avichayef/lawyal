@@ -204,3 +204,24 @@ jobs:
           
           # Check if endpoint is responding
           curl -f -s -o /dev/null "http://$APP_URL" || echo "⚠️ Warning: Application endpoint not responding yet"
+
+      # Update App URL
+      - name: Update App URL
+        run: |
+          # Wait for the app to up (3 minutes)
+          echo "Waiting for LoadBalancer URL..."
+          sleep 180
+          APP_URL=$(kubectl get service flask-app-flask-app -o jsonpath="{.status.loadBalancer.ingress[0].hostname}" 2>/dev/null)
+          
+          # Update the app_url.txt file
+          echo "Application URL: http://$APP_URL" > DevopsProject/app_url.txt
+          
+          # Commit and push the updated file
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git add DevopsProject/app_url.txt
+          git commit -m "Update application URL [skip ci]"
+          git push
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
