@@ -47,14 +47,40 @@ jobs:
         with:
           terraform_version: 1.5.0
 
-      # Terraform init and apply
-      - name: Terraform Init and Apply
-        working-directory: terraform  # working directory to terraform
+      # First run Bootstrap Terraform backend
+      - name: Bootstrap Terraform Backend
+        working-directory: terraform/bootstrap
         run: |
           terraform init
           terraform apply -auto-approve
+          # Get the bucket name and update backend.tf
+          BUCKET_NAME=$(terraform output -raw state_bucket_name)
+          cd ..
+          cat > backend.tf << EOF
+          terraform {
+            backend "s3" {
+              bucket         = "${BUCKET_NAME}"
+              key            = "terraform.tfstate"
+              region         = "us-east-1"
+              encrypt        = true
+              dynamodb_table = "terraform-lock"
+            }
+          }
+          EOF
         env:
-          # Pass AWS credentials as variables
+          TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      # Terraform init with updated backend
+      - name: Init main Terraform
+        working-directory: terraform
+        run: terraform init -reconfigure
+
+      # Terraform apply main infrastructure
+      - name: Apply main Infrastructure
+        working-directory: terraform
+        run: terraform apply -auto-approve
+        env:
           TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 

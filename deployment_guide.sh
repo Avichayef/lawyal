@@ -1,7 +1,6 @@
-#!/bin/bash
 # Deployment Guide - Commands for creating and destroying infrastructure
+#(for manul run)
 
-# =============================================
 # CREATE INFRASTRUCTURE (Top-down)
 # =============================================
 
@@ -24,7 +23,7 @@ cd ../app
 cd ../helm
 ./deploy.sh
 
-# =============================================
+
 # DESTROY EVERYTHING (Bottom-up)
 # =============================================
 
