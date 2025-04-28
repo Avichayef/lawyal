@@ -52,7 +52,7 @@ jobs:
         working-directory: terraform  # working directory to terraform
         run: |
           terraform init
-          terraform apply -var-file="secrets.tfvars" -auto-approve
+          terraform apply -auto-approve
         env:
           # Pass AWS credentials as variables
           TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
