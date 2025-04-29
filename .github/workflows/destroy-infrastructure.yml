@@ -75,7 +75,6 @@ jobs:
         run: |
           echo "Removing application..."
           helm uninstall flask-app || true
-          helm uninstall aws-load-balancer-controller -n kube-system || true
           
           echo "Waiting for resources to be cleaned up..."
           sleep 30
