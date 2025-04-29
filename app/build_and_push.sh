@@ -1,5 +1,7 @@
 #!/bin/bash
 
+## For Manual Run Only! ##
+
 # Get values from TF output
 ECR_REPO=$(cd ../terraform && terraform output -raw ecr_repository_url)
 AWS_REGION=$(cd ../terraform && terraform output -raw aws_region)

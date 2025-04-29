@@ -16,8 +16,8 @@ resource "aws_subnet" "public_subnet" {
   
   tags = {
     Name = "Public Subnet"
-    "kubernetes.io/role/elb" = "1"
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    "kubernetes.io/role/elb" = "1"                           # Required for EKS to auto-provision ELB on subnet
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"   # Required for EKS to identify resources for this cluster
   }
 }
 
@@ -60,8 +60,8 @@ resource "aws_subnet" "private_subnet" {
 
   tags = {
     Name = "Private Subnet"
-    "kubernetes.io/role/internal-elb" = "1"
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    "kubernetes.io/role/internal-elb" = "1"                  # Required for EKS to auto-provision internal ELB on subnet
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"   # Required for EKS to identify resources for this cluster
   }
 }
 

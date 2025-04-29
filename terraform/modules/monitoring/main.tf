@@ -4,10 +4,6 @@ resource "aws_cloudwatch_log_group" "eks_logs" {
   retention_in_days = 30
 }
 
-# Enable EKS Control Plane Logging
-# Note: This should be part of the EKS cluster resource configuration instead
-# Moving this configuration to the EKS module
-
 # CloudWatch Dashboard for EKS monitoring
 resource "aws_cloudwatch_dashboard" "eks_dashboard" {
   dashboard_name = "EKS-Monitoring-Dashboard"
@@ -80,7 +76,7 @@ resource "aws_cloudwatch_metric_alarm" "node_cpu_high" {
   statistic          = "Average"
   threshold          = "80"
   alarm_description  = "This metric monitors EKS node CPU utilization"
-  alarm_actions      = []  # Add SNS topic ARN here if you want notifications
+  alarm_actions      = [] 
 
   dimensions = {
     ClusterName = "lawyal-project-eks-cluster"

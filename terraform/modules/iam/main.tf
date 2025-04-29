@@ -69,43 +69,6 @@ variable "cluster_oidc_issuer_url" {
   type        = string
 }
 
-resource "aws_iam_role" "aws_load_balancer_controller" {
-  name = "aws-load-balancer-controller"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRoleWithWebIdentity"
-        Effect = "Allow"
-        Principal = {
-          Federated = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${replace(var.cluster_oidc_issuer_url, "https://", "")}"
-        }
-        Condition = {
-          StringEquals = {
-            "${replace(var.cluster_oidc_issuer_url, "https://", "")}:sub": "system:serviceaccount:kube-system:aws-load-balancer-controller"
-          }
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "aws_load_balancer_controller" {
-  policy_arn = aws_iam_policy.aws_load_balancer_controller.arn
-  role       = aws_iam_role.aws_load_balancer_controller.name
-}
-
-# Add the required policy for the Load Balancer Controller
-resource "aws_iam_policy" "aws_load_balancer_controller" {
-  name = "AWSLoadBalancerControllerIAMPolicy"
-  policy = file("${path.module}/lb-controller-policy.json")  # You'll need to add this policy file
-}
-
-output "aws_load_balancer_controller_role_arn" {
-  value = aws_iam_role.aws_load_balancer_controller.arn
-}
-
 # Add EC2 IMDS policy to node group role
 resource "aws_iam_role_policy" "node_group_imds" {
   name = "eks-node-group-imds"
@@ -166,12 +129,6 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_agent_policy" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
   role       = aws_iam_role.cloudwatch_agent.name
 }
-
-# Remove this incorrect policy attachment
-# resource "aws_iam_role_policy_attachment" "cloudwatch_container_insights" {
-#   policy_arn = "arn:aws:iam::aws:policy/AWSCloudWatchAgentServerPolicy"
-#   role       = aws_iam_role.cloudwatch_agent.name
-# } 
 
 # Add output for the CloudWatch agent role ARN
 output "cloudwatch_agent_role_arn" {

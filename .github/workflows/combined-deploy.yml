@@ -147,10 +147,17 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}  # ECR registry URL
           ECR_REPOSITORY: ly-flask-app-repo                      # repo name
-          IMAGE_TAG: ${{ github.sha }}                          # Use commit SHA as tag
+          DATE: $(date +'%Y%m%d')
+          BUILD_NUMBER: ${{ github.run_number }}
+          GIT_SHA: ${{ github.sha }}
         run: |
           cd app
-          # Build image with commit SHA tag
+          # Create image tag with format: date-buildnumber-gitsha
+          IMAGE_TAG="${DATE}-${BUILD_NUMBER}-${GIT_SHA:0:7}"
+          echo "Using image tag: $IMAGE_TAG"
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+          
+          # Build image with new tag format
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           # Push image with commit SHA tag
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
@@ -172,7 +179,7 @@ jobs:
           # Deploy/upgrade using Helm
           helm upgrade --install flask-app ./flask-app \
             --set image.repository=$ECR_REPO \
-            --set image.tag=${{ github.sha }} \
+            --set image.tag=${{ env.IMAGE_TAG }} \
             --wait --timeout 5m
 
       # Create summary with access information

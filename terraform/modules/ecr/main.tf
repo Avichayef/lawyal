@@ -34,7 +34,7 @@ resource "aws_ecr_lifecycle_policy" "main" {
   policy = jsonencode({
     rules = [{
       rulePriority = 1                    # Lower numbers are evaluated first
-      description  = "Keep last 30 images" # Human-readable desc
+      description  = "Keep last 5 images" # Human-readable desc
       selection = {
         tagStatus   = "any"               # Apply to all images
         countType   = "imageCountMoreThan" # Type of count rule

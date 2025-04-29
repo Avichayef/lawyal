@@ -1,4 +1,24 @@
-# Project Setup Guide
+# Lawyal DevOps Project - Flask App on EKS
+A DevOps project demonstrating CI/CD deployment of a Flask app to EKS using Terraform, Docker, and Helm.
+
+## Project Overview
+This project implements an infrastructure for deploying containerized applications on AWS, including:
+
+- **Infrastructure as Code**: AWS resources provisioned with Terraform
+- **Containerization**: Flask app packaged with Docker
+- **Orchestration**: Kubernetes deployment on EKS with Helm
+- **CI/CD Pipeline**: Automated deployment with GitHub Actions
+- **Monitoring**: CloudWatch for logs and metrics
+- **Security**: IAM roles with least privilege, private subnets, encrypted data
+
+## Architecture
+
+- **VPC**: VPC with public and private subnets
+- **EKS**: Managed Kubernetes cluster with autoscaling node groups
+- **ECR**: Container registry for Docker images
+- **IAM**: Roles and policies for secure access
+- **CloudWatch**: Monitoring and logging
+- **S3/DynamoDB**: Terraform state management
 
 ## Prerequisites
 - AWS CLI installed and configured
@@ -7,7 +27,8 @@
 - kubectl installed
 - Helm installed
 
-## Quick Start
+## ----------------------------------------------------------------- ##
+## Manual Deployment
 
 1. **Clone Repository**
    ```bash
@@ -40,8 +61,17 @@
    ./deploy.sh
    ```
 
+## ----------------------------------------------------------------- ##
 ## Automated Deployment
-Push changes to main branch to trigger GitHub Actions pipeline.
+Push changes to main branch to trigger GitHub Actions pipeline. For comprehensive deployment instructions including CI/CD setup, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+## Project Structure
+- `/app`: Flask app code and Dockerfile
+- `/terraform`: Infrastructure as Code
+  - `/bootstrap`: S3 backend setup
+  - `/modules`: Reusable Terraform modules
+- `/helm`: Kubernetes deployment charts
+- `/.github/workflows`: CI/CD pipeline definitions
 
 ## Clean Up
 ```bash
@@ -50,3 +80,9 @@ helm uninstall flask-app
 cd ../terraform
 terraform destroy -var-file="secrets.tfvars"
 ```
+
+## Documentation
+- [Deployment Guide](DEPLOYMENT.md): Comprehensive deployment instructions
+- [App README](app/README.md): App build and deployment details
+- [Terraform README](terraform/README.md): Infrastructure deployment guide
+- [Best Practices](BEST_PRACTICES.md): Project best practices and TODOs

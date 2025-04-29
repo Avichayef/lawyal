@@ -1,5 +1,5 @@
 # Deployment Guide - Commands for creating and destroying infrastructure
-#(for manul run)
+#(FOR MANUAL RUN ONLY!)
 
 # CREATE INFRASTRUCTURE (Top-down)
 # =============================================
@@ -30,7 +30,6 @@ cd ../helm
 # 1. Remove Helm deployments
 cd DevopsProject/helm
 helm uninstall flask-app
-helm uninstall aws-load-balancer-controller -n kube-system
 
 # 2. Destroy main infrastructure
 cd ../terraform

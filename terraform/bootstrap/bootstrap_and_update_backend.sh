@@ -1,5 +1,7 @@
 #!/bin/bash
 
+## For Manual Run Only! ##
+
 # Initialize and apply bootstrap with parent directory's secrets
 terraform init
 terraform apply -var-file="../secrets.tfvars" -auto-approve
