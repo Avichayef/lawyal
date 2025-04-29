@@ -224,6 +224,9 @@ jobs:
           # Use GITHUB_TOKEN for authentication
           git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
           
+          # Pull latest changes before pushing
+          git pull origin ${GITHUB_REF}
+          
           git add app_url.txt
           git commit -m "Update application URL [skip ci]"
           git push origin HEAD:${GITHUB_REF}
