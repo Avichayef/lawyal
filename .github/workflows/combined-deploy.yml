@@ -206,20 +206,30 @@ jobs:
           # Check if endpoint is responding
           curl -f -s -o /dev/null "http://$APP_URL" || echo "⚠️ Warning: Application endpoint not responding yet"
 
-      # Better App URL presentation
-      - name: Output App URL
+      # Update App URL
+      - name: Update App URL
         run: |
+          # Wait for the app to up (3 minutes)
+          echo "Waiting for LoadBalancer URL..."
+          sleep 180
           APP_URL=$(kubectl get service flask-app-flask-app -o jsonpath="{.status.loadBalancer.ingress[0].hostname}" 2>/dev/null)
-          echo "::notice title=Application URL::http://$APP_URL"
           
-          # Create GitHub deployment environment
-          echo "APP_URL=http://$APP_URL" >> $GITHUB_ENV
+          # Update the app_url.txt file
+          echo "Application URL: http://$APP_URL" > app_url.txt
           
-      # Create GitHub deployment (optional)
-      - name: Create GitHub deployment
-        uses: chrnorm/deployment-action@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          environment: development
-          environment-url: ${{ env.APP_URL }}
-          description: 'Deployment from workflow run'
+          # Configure git with token-based authentication
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Use GITHUB_TOKEN for authentication
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+          
+          # Pull latest changes before pushing
+          git pull origin ${GITHUB_REF}
+          
+          git add app_url.txt
+          git commit -m "Update application URL [skip ci]"
+          git push origin HEAD:${GITHUB_REF}
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
