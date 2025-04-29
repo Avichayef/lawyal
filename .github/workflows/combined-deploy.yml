@@ -147,18 +147,18 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}  # ECR registry URL
           ECR_REPOSITORY: ly-flask-app-repo                      # repo name
-          DATE: $(date +'%Y%m%d')
           BUILD_NUMBER: ${{ github.run_number }}
           GIT_SHA: ${{ github.sha }}
         run: |
           cd app
           # Create image tag with format: date-buildnumber-gitsha
+          DATE=$(date +'%Y%m%d')
           IMAGE_TAG="${DATE}-${BUILD_NUMBER}-${GIT_SHA:0:7}"
           echo "Using image tag: $IMAGE_TAG"
           echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
           
           # Build image with new tag format
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker buildx build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           # Push image with commit SHA tag
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           # Also tag as latest
