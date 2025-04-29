@@ -206,7 +206,7 @@ jobs:
           # Check if endpoint is responding
           curl -f -s -o /dev/null "http://$APP_URL" || echo "⚠️ Warning: Application endpoint not responding yet"
 
-      # Update App URL
+      # Update App URL 
       - name: Update App URL
         run: |
           # Wait for the app to up (3 minutes)
