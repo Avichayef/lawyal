@@ -110,7 +110,37 @@ jobs:
           echo "Checking if state bucket still exists..."
           if aws s3api head-bucket --bucket ${{ steps.find-bucket.outputs.bucket_name }} 2>/dev/null; then
             echo "Forcing deletion of state bucket..."
+            # First remove all objects
             aws s3 rm s3://${{ steps.find-bucket.outputs.bucket_name }} --recursive
+            
+            # If versioning is enabled, remove all versions
+            echo "Removing all object versions..."
+            aws s3api list-object-versions --bucket ${{ steps.find-bucket.outputs.bucket_name }} --output json --query '{Objects: Versions[].{Key:Key,VersionId:VersionId}}' 2>/dev/null | \
+            jq -c '.Objects[] | select(.Key != null and .VersionId != null) | {Key:.Key, VersionId:.VersionId}' 2>/dev/null | \
+            while read -r OBJECT; do
+              if [ ! -z "$OBJECT" ]; then
+                KEY=$(echo $OBJECT | jq -r '.Key')
+                VERSION_ID=$(echo $OBJECT | jq -r '.VersionId')
+                echo "Deleting object: $KEY (version $VERSION_ID)"
+                aws s3api delete-object --bucket ${{ steps.find-bucket.outputs.bucket_name }} --key "$KEY" --version-id "$VERSION_ID"
+              fi
+            done
+            
+            # Remove delete markers if any
+            echo "Removing delete markers..."
+            aws s3api list-object-versions --bucket ${{ steps.find-bucket.outputs.bucket_name }} --output json --query '{Objects: DeleteMarkers[].{Key:Key,VersionId:VersionId}}' 2>/dev/null | \
+            jq -c '.Objects[] | select(.Key != null and .VersionId != null) | {Key:.Key, VersionId:.VersionId}' 2>/dev/null | \
+            while read -r OBJECT; do
+              if [ ! -z "$OBJECT" ]; then
+                KEY=$(echo $OBJECT | jq -r '.Key')
+                VERSION_ID=$(echo $OBJECT | jq -r '.VersionId')
+                echo "Deleting delete marker: $KEY (version $VERSION_ID)"
+                aws s3api delete-object --bucket ${{ steps.find-bucket.outputs.bucket_name }} --key "$KEY" --version-id "$VERSION_ID"
+              fi
+            done
+            
+            # Now delete the empty bucket
+            echo "Now deleting the empty bucket..."
             aws s3api delete-bucket --bucket ${{ steps.find-bucket.outputs.bucket_name }}
           fi
 
