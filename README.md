@@ -30,40 +30,44 @@ This project implements an infrastructure for deploying containerized applicatio
 ## ----------------------------------------------------------------- ##
 ## Manual Deployment
 
-1. **Clone Repository**
-   ```bash
-   git clone <repository-url>
-   cd DevopsProject
-   ```
+# Create infrastructure (Top-down)
+# 1. Bootstrap
+cd DevopsProject/terraform/bootstrap
+./bootstrap_and_update_backend.sh
 
-2. **Create Secrets File**
-   ```bash
-   # Create terraform/secrets.tfvars with:
-   aws_access_key_id     = "your-access-key"
-   aws_secret_access_key = "your-secret-key"
-   region               = "us-east-1"
-   ```
+# 2. Initialize main Terraform
+cd ..  # back to main terraform dir
+terraform init -reconfigure
 
-3. **Deploy Infrastructure**
-   ```bash
-   cd terraform/bootstrap
-   ./bootstrap_and_update_backend.sh
-   cd ..
-   terraform init
-   terraform apply -var-file="secrets.tfvars"
-   ```
+# 3. Apply main infrastructure
+terraform apply -var-file="secrets.tfvars" -auto-approve
 
-4. **Build and Deploy Application**
-   ```bash
-   cd ../app
-   ./build_and_push.sh
-   cd ../helm
-   ./deploy.sh
-   ```
+# 4. Build and push app
+cd ../app
+./build_and_push.sh
+
+# 5. Deploy with Helm
+cd ../helm
+./deploy.sh
+
+# For destruction (Bottom-up)
+# 1. Remove Helm deployments
+cd DevopsProject/helm
+helm uninstall flask-app
+
+# 2. Destroy main infrastructure
+cd ../terraform
+terraform destroy -var-file="secrets.tfvars" -auto-approve
+
+# 3. Destroy bootstrap infrastructure
+cd bootstrap
+terraform destroy -var-file="../secrets.tfvars" -auto-approve
+
 
 ## ----------------------------------------------------------------- ##
 ## Automated Deployment
-Push changes to main branch to trigger GitHub Actions pipeline. For comprehensive deployment instructions including CI/CD setup, see [DEPLOYMENT.md](DEPLOYMENT.md).
+Push changes to main branch to trigger GitHub Actions pipeline adjust the access keys via GH secrets.
+For comprehensive deployment instructions including CI/CD setup, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Project Structure
 - `/app`: Flask app code and Dockerfile
@@ -74,12 +78,7 @@ Push changes to main branch to trigger GitHub Actions pipeline. For comprehensiv
 - `/.github/workflows`: CI/CD pipeline definitions
 
 ## Clean Up
-```bash
-cd DevopsProject/helm
-helm uninstall flask-app
-cd ../terraform
-terraform destroy -var-file="secrets.tfvars"
-```
+ - run Destroy Infrastructure workflow
 
 ## Documentation
 - [Deployment Guide](DEPLOYMENT.md): Comprehensive deployment instructions
