@@ -8,7 +8,7 @@ provider "aws" {
   secret_key = var.aws_secret_access_key
 }
 
-# Add this after your first AWS provider block
+# EKS auth
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
@@ -38,7 +38,6 @@ module "eks" {
   eks_role_arn = module.iam.eks_cluster_role_arn
   node_group_role_arn = module.iam.eks_node_group_role_arn
   node_group_name = var.node_group_name
-  # Remove the enable_irsa line as it's not needed
 }
 
 # Create ECR repo for Docker images
