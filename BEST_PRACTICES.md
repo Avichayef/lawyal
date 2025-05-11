@@ -5,7 +5,6 @@
 - ✅ **ECR image scanning enabled**: Auto vulnerability scanning on image push to detect security issues.
 - ✅ **Data encryption (S3, ECR)**: All data at rest is encrypted using AWS KMS for enhanced security.
 - ✅ **Private subnets for EKS**: EKS nodes run in private subnets to prevent direct internet access.
-- ✅ **CloudTrail logging**: Enabled for monitoring all API calls.
 - ❌ **Automated credential rotation**: Not implemented due to dev environment.
 
 ## Cost Optimization
@@ -38,5 +37,5 @@
 ## Priority TODOs
 1. **Implement credential rotation**: Set up AWS Secrets Manager with automatic rotation for improved security.
 2. **Add cost monitoring**: Configure AWS Budgets and Cost Explorer with alerts for better cost control.
-3. **Configure error tracking**: Implement a solution like Sentry or CloudWatch Insights for application error monitoring.
+3. **Configure error tracking**: Implement a solution like CloudWatch Insights for application error monitoring.
 4. **Enable security scanning**: Set up tools like AWS Security Hub or Prisma Cloud for continuous security assessment.
