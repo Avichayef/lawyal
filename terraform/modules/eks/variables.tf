@@ -25,5 +25,5 @@ variable "node_group_role_arn" {
 variable "node_group_name" {
   type        = string
   description = "Name for the EKS node group"
-  default     = "eks-node-group"  # Provides a default value if not specified
+  default     = "eks-node-group"  # default name
 }
